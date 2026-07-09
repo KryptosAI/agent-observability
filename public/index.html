@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>agent-observability</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="header">
+    <div class="header-left">
+      <span class="logo">◉</span>
+      <span class="title">agent-observability</span>
+      <span class="version-badge">v0.1</span>
+    </div>
+    <div class="header-right">
+      <span class="connection-dot" id="connection-status">● connected</span>
+    </div>
+  </header>
+
+  <nav class="tab-bar" id="tab-bar">
+    <button class="tab active" data-tab="sessions">Sessions</button>
+    <button class="tab" data-tab="tool-health">Tool Health</button>
+  </nav>
+
+  <div class="stats-row" id="stats-row">
+    <div class="stat-card">
+      <span class="stat-number" id="stat-sessions">--</span>
+      <span class="stat-label">sessions</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-number" id="stat-successful">--</span>
+      <span class="stat-label">successful</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-number" id="stat-failed">--</span>
+      <span class="stat-label">failed</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-number" id="stat-toolcalls">--</span>
+      <span class="stat-label">tool calls</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-number" id="stat-cost">--</span>
+      <span class="stat-label">cost</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-number" id="stat-tokens">--</span>
+      <span class="stat-label">tokens</span>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <!-- Sessions Panel -->
+    <div class="panel panel-left tab-panel active" data-tab-panel="sessions" id="panel-sessions">
+      <div class="panel-header">
+        <h2 class="panel-title">Sessions</h2>
+        <input type="text" class="search-input" id="session-search" placeholder="Filter by task...">
+      </div>
+      <div class="table-wrap" id="sessions-table-wrapper">
+        <table class="sessions-table" id="sessions-table">
+          <thead>
+            <tr>
+              <th class="col-grade">Grade</th>
+              <th class="col-status">Status</th>
+              <th class="col-agent">Agent</th>
+              <th class="col-task">Task</th>
+              <th class="col-tokens">Tokens</th>
+              <th class="col-cost">Cost</th>
+              <th class="col-time">Started</th>
+            </tr>
+          </thead>
+          <tbody id="sessions-table-body"></tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="sessions-empty">
+        <span class="empty-icon">∅</span>
+        <p>No sessions recorded</p>
+        <p class="empty-hint">Agent sessions will appear here as they execute</p>
+      </div>
+    </div>
+
+    <!-- Tool Health Panel -->
+    <div class="panel panel-left tab-panel" data-tab-panel="tool-health" id="panel-health">
+      <div class="panel-header">
+        <h2 class="panel-title">MCP Server Health</h2>
+      </div>
+      <div class="health-grid" id="health-grid"></div>
+      <div class="empty-state" id="health-empty">
+        <span class="empty-icon">∅</span>
+        <p>No MCP servers registered</p>
+        <p class="empty-hint">Connect servers to monitor health</p>
+      </div>
+    </div>
+
+    <!-- Detail Panel (right side) -->
+    <div class="panel panel-right" id="panel-detail">
+      <div id="detail-empty">
+        <div class="empty-state">
+          <span class="empty-icon">◉</span>
+          <p>Select a session</p>
+          <p class="empty-hint">Click a session to view its trace</p>
+        </div>
+      </div>
+      <div id="detail-content" style="display:none">
+        <div class="detail-header" id="trace-meta">
+          <h3 class="detail-title" id="detail-title">--</h3>
+          <div class="detail-grade-row">
+            <span class="grade-badge-large" id="detail-grade-badge">--</span>
+            <span class="grade-meaning" id="detail-grade-meaning">--</span>
+          </div>
+        </div>
+
+        <div class="detail-meta-grid" id="detail-meta-grid">
+          <div class="meta-item">
+            <span class="meta-label">Agent</span>
+            <span class="meta-value" id="detail-agent">--</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Status</span>
+            <span class="meta-value" id="detail-status">--</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Input tokens</span>
+            <span class="meta-value" id="detail-input-tokens">--</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Output tokens</span>
+            <span class="meta-value" id="detail-output-tokens">--</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Total tokens</span>
+            <span class="meta-value" id="detail-total-tokens">--</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Cost</span>
+            <span class="meta-value" id="detail-cost">--</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Duration</span>
+            <span class="meta-value" id="detail-duration">--</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Started</span>
+            <span class="meta-value" id="detail-started">--</span>
+          </div>
+        </div>
+
+        <div class="error-banner" id="detail-error" style="display:none"></div>
+
+        <div class="detail-section">
+          <h4 class="section-title">Tool Calls</h4>
+          <div class="timeline" id="trace-timeline"></div>
+        </div>
+
+        <div class="detail-section">
+          <h4 class="section-title">Decisions</h4>
+          <div id="detail-decisions" class="detail-entries"></div>
+        </div>
+
+        <div class="detail-section">
+          <h4 class="section-title">Audit Log</h4>
+          <div id="detail-audit" class="detail-entries"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Health History Modal -->
+  <div class="modal-overlay" id="server-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h4 class="modal-title" id="modal-server-name">--</h4>
+        <button class="modal-close" id="modal-close">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-body">
+        <div id="modal-health-chart"></div>
+        <div id="modal-health-stats"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <span id="footer-time">--</span>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

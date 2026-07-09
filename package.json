@@ -1,0 +1,53 @@
+{
+  "name": "agent-observability",
+  "version": "0.1.0",
+  "description": "Open source agent observability — see what your agents did, why they failed, and what it cost. Runs locally.",
+  "main": "cli.js",
+  "bin": {
+    "agent-obs": "./cli.js"
+  },
+  "scripts": {
+    "start": "node cli.js start",
+    "dashboard": "node cli.js dashboard",
+    "inspect": "node cli.js inspect",
+    "test": "node test.js",
+    "server": "node cli.js server"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.11.1",
+    "express": "^4.21.0",
+    "uuid": "^14.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/agent-observability/agent-observability"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "observability",
+    "mcp",
+    "claude",
+    "cursor",
+    "tracing",
+    "monitoring",
+    "claude-code",
+    "llm"
+  ],
+  "author": "Agent Observability Contributors",
+  "license": "MIT",
+  "homepage": "https://github.com/agent-observability/agent-observability#readme",
+  "bugs": {
+    "url": "https://github.com/agent-observability/agent-observability/issues"
+  },
+  "files": [
+    "cli.js",
+    "server.js",
+    "proxy.js",
+    "mcp-server.js",
+    "database.js",
+    "public/",
+    "README.md",
+    "LICENSE"
+  ]
+}
