@@ -1,5 +1,5 @@
 {
-  "name": "agent-observability",
+  "name": "agent-obs",
   "version": "0.1.0",
   "description": "Open source agent observability — see what your agents did, why they failed, and what it cost. Runs locally.",
   "main": "cli.js",
@@ -20,7 +20,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/agent-observability/agent-observability"
+    "url": "https://github.com/KryptosAI/agent-observability"
   },
   "keywords": [
     "ai",
