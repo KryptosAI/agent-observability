@@ -3,7 +3,7 @@ const database = require('./database');
 
 const SERVER_INFO = {
   name: 'agent-observability',
-  version: '0.1.0',
+  version: '1.0.0',
 };
 
 const CAPABILITIES = {
