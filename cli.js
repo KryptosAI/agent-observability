@@ -3,6 +3,7 @@
 const { startServer } = require('./server');
 const { startProxy, startRecording, recordToolCall, finishRecording } = require('./proxy');
 const { startMcpServer } = require('./mcp-server');
+const { getSessions, getToolCalls, getDashboardStats } = require('./database');
 
 const command = process.argv[2];
 const args = process.argv.slice(3);
@@ -18,17 +19,33 @@ function usage() {
     proxy [--desc <text>] [--agent <type>] -- <command...>
                             Transparent MCP proxy — intercepts all tool calls
     server                  Run as MCP server (agents self-report via MCP tools)
+    check [--last <n>]      Show latest session summary (or last n sessions)
+    stats                   Show aggregate stats across all sessions
     dashboard [--port <n>]  Start the web dashboard
     inspect <session-id>    Show session details in terminal
 
   Examples:
     agent-obs proxy --desc "fix login bug" -- npx @modelcontextprotocol/server-filesystem /tmp
     agent-obs server
+    agent-obs check
+    agent-obs check --last 3
+    agent-obs stats
     agent-obs dashboard
     agent-obs inspect abc12345
 
   Without a command, starts the dashboard on port 9400.
   `);
+}
+
+function timeAgo(sqliteUtc) {
+  if (!sqliteUtc) return 'unknown';
+  const then = new Date(sqliteUtc.replace(' ', 'T') + 'Z').getTime();
+  if (isNaN(then)) return sqliteUtc;
+  const diffSec = Math.max(0, Math.floor((Date.now() - then) / 1000));
+  if (diffSec < 60) return `${diffSec}s ago`;
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+  return `${Math.floor(diffSec / 86400)}d ago`;
 }
 
 async function main() {
@@ -47,6 +64,63 @@ async function main() {
   if (command === 'server') {
     startMcpServer();
     return;
+  }
+
+  if (command === 'check') {
+    const lastN = args.indexOf('--last') >= 0 ? parseInt(args[args.indexOf('--last') + 1]) || 1 : 1;
+    const sessions = getSessions({ limit: lastN });
+    if (!sessions.length) {
+      console.log('No agent sessions recorded yet.');
+      console.log('Start the dashboard with: agent-obs dashboard');
+      process.exit(0);
+    }
+    if (lastN === 1) {
+      const s = sessions[0];
+      const calls = getToolCalls(s.id);
+      const errors = calls.filter(c => c.status === 'error').length;
+      const totalMs = calls.reduce((sum, c) => sum + (c.duration_ms || 0), 0);
+      console.log(`Session: ${s.id.slice(0, 8)}`);
+      console.log(`Agent:   ${s.agent_type}`);
+      console.log(`Task:    ${s.task_description || '(none)'}`);
+      console.log(`Status:  ${s.status} | Grade: ${s.grade || 'N/A'}`);
+      console.log(`Tools:   ${calls.length} calls | ${errors} ${errors === 1 ? 'error' : 'errors'} | ${(totalMs / 1000).toFixed(1)}s total`);
+      console.log(`Tokens:  ${(s.total_tokens || 0).toLocaleString()} | Cost: $${s.estimated_cost_usd}`);
+      console.log(`Started: ${timeAgo(s.started_at)}`);
+    } else {
+      for (const s of sessions) {
+        const calls = getToolCalls(s.id);
+        const errors = calls.filter(c => c.status === 'error').length;
+        const statusIcon = s.status === 'complete' ? '✓' : s.status === 'error' ? '✗' : '⋯';
+        console.log(`${statusIcon} ${s.id.slice(0, 8)} | ${s.grade || '?'} | ${(s.task_description || '(none)').slice(0, 50)} | ${calls.length} calls | ${errors} errors | $${s.estimated_cost_usd}`);
+      }
+    }
+    process.exit(0);
+  }
+
+  if (command === 'stats') {
+    const stats = getDashboardStats();
+    console.log('── Agent Observability ──');
+    console.log(`Total sessions:    ${stats.totalSessions}`);
+    console.log(`Completed:         ${stats.completedSessions}`);
+    console.log(`Failed:            ${stats.failedSessions}`);
+    console.log(`Total tool calls:  ${stats.totalToolCalls}`);
+    console.log(`Total tokens:      ${(stats.totalTokens || 0).toLocaleString()}`);
+    console.log(`Total cost:        $${stats.totalCost.toFixed(2)}`);
+    console.log(`Avg duration:      ${Math.round(stats.avgDurationSeconds)}s`);
+
+    const gradeValues = { A: 4, B: 3, C: 2, D: 1, F: 0 };
+    const distribution = { A: 0, B: 0, C: 0, D: 0, F: 0 };
+    const graded = getSessions({ limit: 10000 }).filter(s => s.grade in gradeValues);
+    for (const s of graded) distribution[s.grade]++;
+    if (graded.length) {
+      const avg = graded.reduce((sum, s) => sum + gradeValues[s.grade], 0) / graded.length;
+      const avgGrade = ['F', 'D', 'C', 'B', 'A'][Math.round(avg)];
+      console.log(`Avg grade:         ${avgGrade}`);
+    }
+    console.log('');
+    console.log('Grade distribution:');
+    console.log(`  A: ${distribution.A}  B: ${distribution.B}  C: ${distribution.C}  D: ${distribution.D}  F: ${distribution.F}`);
+    process.exit(0);
   }
 
   if (command === 'proxy') {

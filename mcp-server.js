@@ -67,6 +67,24 @@ const TOOLS = [
       properties: {},
     },
   },
+  {
+    name: 'check_session',
+    description: 'Check the current session status — tool call count, error count, grade estimate, and session duration',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        sessionId: { type: 'string', description: 'The session ID to check (optional — uses most recent active session if omitted)' },
+      },
+    },
+  },
+  {
+    name: 'get_session_stats',
+    description: 'Get aggregate stats across all sessions — total sessions, total tool calls, total cost, grade distribution',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
 ];
 
 function log(message) {
@@ -215,12 +233,58 @@ function handleToolsCall(id, params) {
           inputTokens: session.input_tokens,
           outputTokens: session.output_tokens,
           estimatedCostUsd: session.estimated_cost_usd,
+          toolCallCount: toolCalls.length,
           toolCount: toolCalls.length,
           errorCount,
           errorMessage: session.error_message,
         };
 
         sendToolResult(id, summary);
+        break;
+      }
+
+      case 'check_session': {
+        const sessions = database.getSessions({ limit: 1, status: undefined });
+        const session = args.sessionId
+          ? database.getSession(args.sessionId)
+          : (sessions.length > 0 ? sessions[0] : null);
+
+        if (!session) {
+          sendToolResult(id, { error: 'No session found. Start one with start_session.' });
+          break;
+        }
+
+        const toolCalls = database.getToolCalls(session.id);
+        const errors = toolCalls.filter(tc => tc.status === 'error').length;
+        const grade = database.computeGrade({ errorCount: errors, totalCalls: toolCalls.length, durationMs: 0 });
+        const cost = database.estimateCost(session.total_tokens || 0);
+
+        sendToolResult(id, {
+          sessionId: session.id,
+          status: session.status,
+          grade: session.grade || grade.grade,
+          score: grade.score,
+          toolCalls: toolCalls.length,
+          errors,
+          totalTokens: session.total_tokens || 0,
+          estimatedCostUsd: session.estimated_cost_usd || cost,
+          startedAt: session.started_at,
+          taskDescription: session.task_description,
+        });
+        break;
+      }
+
+      case 'get_session_stats': {
+        const stats = database.getDashboardStats();
+        const sessions = database.getSessions({ limit: 1000 });
+        const grades = { A: 0, B: 0, C: 0, D: 0, F: 0 };
+        sessions.forEach(s => { if (s.grade && grades.hasOwnProperty(s.grade)) grades[s.grade]++; });
+
+        sendToolResult(id, {
+          ...stats,
+          gradeDistribution: grades,
+          latestSession: sessions.length > 0 ? sessions[0].id : null,
+        });
         break;
       }
 
