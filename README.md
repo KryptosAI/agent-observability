@@ -284,7 +284,10 @@ AgentShelf scans a Shopify store's theme, apps, admin settings, and custom code 
 Veros generates synthetic longitudinal patient records (FHIR R4) and uses them to validate clinical decision support agents. Its core principle: **"no trace, no answer."** Every snippet of clinical reasoning produced by an AI must be traceable back to the specific data element (lab result, medication, condition) that supports it. **Pattern adopted here:** decision point tracking — every agent choice must cite its basis, making reasoning auditable and contestable.
 
 ### MCP Observatory
-MCP Observatory sits on top of Model Context Protocol servers and scores their health: uptime, response latency, tool success rate, error rate. It implements pass/fail gating — if a server's health score drops below a threshold, it's automatically excluded from the agent's available tools. **Pattern adopted here:** tool health scoring, session grading (A-F), and automatic degradation flags.
+
+[**MCP Observatory**](https://github.com/KryptosAI/mcp-observatory) secures MCP servers — testing them for vulnerabilities, schema drift, and attack surfaces before agents depend on them. It's used by 850+ developers weekly and powers CI pipelines for MCP server security. **Use Observatory to secure your MCP servers. Use agent-obs to trace the agents that depend on them.** Observatory validates; agent-obs observes.
+
+**Pattern adopted here:** tool health scoring, session grading (A-F), and automatic degradation flags.
 
 ## Open Source vs Cloud
 
