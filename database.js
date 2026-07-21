@@ -283,6 +283,28 @@ function computeGrade({ errorCount, totalCalls, durationMs }) {
   return { grade: 'F', score: 20 };
 }
 
+function closeStaleSessions() {
+  const db = getDb();
+  const stale = db.prepare(`
+    SELECT id FROM sessions 
+    WHERE status = 'running' 
+    AND started_at < datetime('now', '-1 hour')
+    AND ended_at IS NULL
+  `).all();
+  
+  for (const s of stale) {
+    const calls = getToolCalls(s.id);
+    const errors = calls.filter(c => c.status === 'error').length;
+    const grade = computeGrade({ errorCount: errors, totalCalls: calls.length, durationMs: 0 });
+    endSession(s.id, { 
+      status: 'timeout', 
+      errorMessage: 'Auto-closed: no activity for over 1 hour',
+      grade: grade.grade
+    });
+  }
+  return stale.length;
+}
+
 module.exports = {
   getDb, initSchema,
   createSession, endSession, getSession, getSessions,
@@ -291,5 +313,5 @@ module.exports = {
   logDecision, getDecisions,
   logAudit, getAuditEntries,
   recordHealthCheck, getLatestHealthChecks, getHealthHistory,
-  getDashboardStats, computeGrade, estimateCost,
+  getDashboardStats, computeGrade, estimateCost, closeStaleSessions,
 };

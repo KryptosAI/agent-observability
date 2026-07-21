@@ -126,11 +126,15 @@ function handleInitialize(id, params) {
     protocolVersion: '2024-11-05',
     serverInfo: SERVER_INFO,
     capabilities: CAPABILITIES,
+    instructions: "After every tool call (Read, Write, Edit, Bash, Glob, Grep, or any MCP tool), you MUST call log_tool_call on the agent-obs server with: toolName, status (success/error), outputSummary, and durationMs. Never skip a call — even fast operations. Start a session with start_session at task start. End it with end_session when done. The only tools you do NOT log are the agent-obs tools themselves.",
   });
 }
 
 function handleToolsList(id) {
-  sendResponse(id, { tools: TOOLS });
+  sendResponse(id, { 
+    tools: TOOLS,
+    instructions: "After every tool call (Read, Write, Edit, Bash, Glob, Grep, or any MCP tool), you MUST call log_tool_call on the agent-obs server with: toolName, status (success/error), outputSummary, and durationMs. Never skip a call — even fast operations. Start a session with start_session at task start. End it with end_session when done. The only tools you do NOT log are the agent-obs tools themselves."
+  });
 }
 
 function handleToolsCall(id, params) {
@@ -332,6 +336,7 @@ function processMessage(message) {
 }
 
 function startServer() {
+  database.closeStaleSessions();
   log('Starting MCP server (stdio)');
 
   const rl = readline.createInterface({

@@ -93,6 +93,8 @@ agent-obs proxy --desc "fix login bug" -- npx @modelcontextprotocol/server-files
 
 The proxy captures tool names, arguments, results, durations, and success/failure status — but only for calls to the wrapped server. Use it as a supplement, not a replacement, for self-reporting.
 
+> **Note:** Proxy mode is a fallback for agents that cannot self-report. It only captures MCP tool calls (~30% of typical agent actions). Prefer the MCP server approach above.
+
 All data is written to a local SQLite database in `~/.agent-observability/`. No data leaves your machine.
 
 ### 5. How to verify it's working
@@ -111,18 +113,60 @@ The dashboard shows:
 - Full-text search across all tool call inputs and outputs
 - Export to JSON for external analysis
 
+## Agent-Specific Setup
+
+### Claude Code
+
+1. **MCP Config** — Create `.mcp.json` in your project root:
+
+```json
+{
+  "mcpServers": {
+    "agent-obs": {
+      "command": "npx",
+      "args": ["-y", "agent-obs@latest", "server"]
+    }
+  }
+}
+```
+
+2. **Self-reporting instruction** — Create `.claude/instructions.md` (or reference the existing SKILL.md under `.claude/skills/agent-obs/SKILL.md`):
+
+```markdown
+After every tool call, report to agent-obs's log_tool_call.
+Start each task with start_session. End with end_session.
+```
+
+3. **Verify** — Run `agent-obs dashboard`, open http://localhost:9400, and look for your session after the agent completes a task.
+
+### Cursor
+
+1. **MCP Config** — Add to Cursor's MCP settings (`~/.cursor/mcp.json`, or Settings → MCP → Add new global MCP server):
+
+```json
+{
+  "mcpServers": {
+    "agent-obs": {
+      "command": "npx",
+      "args": ["-y", "agent-obs@latest", "server"]
+    }
+  }
+}
+```
+
+2. **Self-reporting instruction** — Create `.cursorrules` (or `.cursor/rules/agent-obs.md`):
+
+```
+After every tool call, you MUST call the agent-obs MCP server's log_tool_call tool.
+Include toolName, status (success/error), outputSummary, and durationMs.
+Start each session with start_session and end with end_session.
+```
+
+3. **Verify** — Run `agent-obs dashboard`, open http://localhost:9400, and look for your session after the agent completes a task.
+
 ## Architecture
 
 ```
-                   ┌──────────────────────────┐
-                   │     agent-obs proxy      │
-                   │   (transparent capture)  │
-                   │                          │
-MCP Client ───────▶│ intercepts tool calls ──▶│ MCP Server
- (Claude/Cursor)   │ logs to SQLite           │  (filesystem,
-                   └──────────┬───────────────┘   github, etc.)
-                              │
-                              ▼
                    ┌──────────────────────────┐
                    │   agent-obs server       │
                    │    (self-reporting)      │
@@ -134,6 +178,15 @@ MCP Client ───────▶│ intercepts tool calls ──▶│ MCP Se
                    │ • decisions              │
                    │ • grades                 │
                    └──────────┬───────────────┘
+                              │
+                              ▼
+                   ┌──────────────────────────┐
+                   │     agent-obs proxy      │
+                   │ (fallback — MCP-only)    │
+                   │                          │
+MCP Client ───────▶│ intercepts tool calls ──▶│ MCP Server
+  (Claude/Cursor)   │ logs to SQLite           │  (filesystem,
+                   └──────────┬───────────────┘   github, etc.)
                               │
                               ▼
                    ┌──────────────────────────┐

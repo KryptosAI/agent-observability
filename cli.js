@@ -5,6 +5,8 @@ const { startProxy, startRecording, recordToolCall, finishRecording } = require(
 const { startMcpServer } = require('./mcp-server');
 const { getSessions, getToolCalls, getDashboardStats } = require('./database');
 
+const pkg = require('./package.json');
+
 const command = process.argv[2];
 const args = process.argv.slice(3);
 
@@ -13,24 +15,23 @@ function usage() {
   agent-obs — Open Source Agent Observability
 
   Commands:
+    server                  Run as MCP server (recommended — agent self-reports all actions)
+    dashboard [--port <n>]  Start the web dashboard
+    check [--last <n>]      Show latest session details
+    stats                   Show aggregate session stats
     start <description>     Start a recording session (manual mode)
     stop <session-id>       End a recording session
     log <session-id>        Log a tool call (pipe JSON on stdin)
-    proxy [--desc <text>] [--agent <type>] -- <command...>
-                            Transparent MCP proxy — intercepts all tool calls
-    server                  Run as MCP server (agents self-report via MCP tools)
-    check [--last <n>]      Show latest session summary (or last n sessions)
-    stats                   Show aggregate stats across all sessions
-    dashboard [--port <n>]  Start the web dashboard
+    proxy [--desc] -- ...   Transparent MCP proxy (fallback — MCP-only capture)
     inspect <session-id>    Show session details in terminal
 
   Examples:
-    agent-obs proxy --desc "fix login bug" -- npx @modelcontextprotocol/server-filesystem /tmp
     agent-obs server
+    agent-obs dashboard
     agent-obs check
     agent-obs check --last 3
     agent-obs stats
-    agent-obs dashboard
+    agent-obs proxy --desc "fix login bug" -- npx @modelcontextprotocol/server-filesystem /tmp
     agent-obs inspect abc12345
 
   Without a command, starts the dashboard on port 9400.
@@ -48,8 +49,29 @@ function timeAgo(sqliteUtc) {
   return `${Math.floor(diffSec / 86400)}d ago`;
 }
 
+function printSummary() {
+  console.log(`agent-obs v${pkg.version}`);
+
+  try {
+    const stats = getDashboardStats();
+    const sessions = getSessions({ limit: 1 });
+    const lastGrade = sessions.length ? sessions[0].grade || '?' : '?';
+
+    if (stats.totalSessions === 0) {
+      console.log('No sessions yet');
+    } else {
+      console.log(`${stats.totalSessions} sessions · ${stats.totalToolCalls} tool calls · last grade ${lastGrade}`);
+    }
+  } catch (_) {
+    console.log('No sessions yet');
+  }
+
+  console.log('Dashboard: http://localhost:9400');
+}
+
 async function main() {
-  if (!command || command === 'help' || command === '--help' || command === '-h') {
+  if (command === 'help' || command === '--help' || command === '-h') {
+    printSummary();
     usage();
     process.exit(0);
   }
@@ -246,6 +268,7 @@ async function main() {
   }
 
   // Default: start dashboard
+  printSummary();
   await startServer(9400);
 }
 
