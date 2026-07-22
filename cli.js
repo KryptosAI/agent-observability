@@ -234,11 +234,31 @@ async function main() {
     }
 
     if (detected.length === 0) {
-      detected.push('unknown');
+      detected.push('no-agent');
       actions.push('No AI agent detected in current directory.');
-      actions.push('Manual setup:');
-      actions.push('  npx agent-obs@latest server    # start MCP server');
-      actions.push('  Add agent-obs to your agent MCP config');
+
+      // Create a starter .mcp.json so they have something to work with
+      const mcpJsonPath = path.join(cwd, '.mcp.json');
+      if (!fs.existsSync(mcpJsonPath)) {
+        const starter = { mcpServers: { 'agent-obs': { command: 'npx', args: ['-y', 'agent-obs@latest', 'server'] } } };
+        fs.writeFileSync(mcpJsonPath, JSON.stringify(starter, null, 2) + '\n');
+        actions.push('Created .mcp.json with agent-obs pre-configured');
+      } else {
+        actions.push('.mcp.json already exists — add agent-obs manually if not present');
+      }
+
+      // Also create a starter instruction file
+      const instrPath = path.join(cwd, '.agent-obs-instructions.md');
+      if (!fs.existsSync(instrPath)) {
+        fs.writeFileSync(instrPath, `After every tool call, report to agent-obs's log_tool_call.
+Start each task with start_session. End with end_session.
+Never skip log_tool_call — every tool call must be logged.\n`);
+        actions.push('Created .agent-obs-instructions.md (self-reporting prompt)');
+      }
+
+      actions.push('');
+      actions.push('Next: paste the config into your agent\'s MCP settings,');
+      actions.push('or run your agent from this directory to auto-detect.');
     }
 
     console.log('╔══════════════════════════════════════════╗');
@@ -344,13 +364,15 @@ async function main() {
   }
 
   if (command === 'demo') {
+    const portIdx = args.indexOf('--port');
+    const port = portIdx >= 0 ? parseInt(args[portIdx + 1]) : 9400;
     const { seedDemoSession, getSessions } = require('./database');
     seedDemoSession();
     printSummary();
     console.log('Demo session loaded — showing a real agent trace');
     const { exec } = require('child_process');
-    exec('open http://localhost:9400');
-    await startServer(9400);
+    exec(`open http://localhost:${port} 2>/dev/null || xdg-open http://localhost:${port} 2>/dev/null`);
+    await startServer(port);
     return;
   }
 
