@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+const path = require('path');
+
 const { startServer } = require('./server');
 const { startProxy, startRecording, recordToolCall, finishRecording } = require('./proxy');
 const { startMcpServer } = require('./mcp-server');
@@ -16,7 +18,8 @@ function usage() {
 
   Commands:
     server                  Run as MCP server (recommended — agent self-reports all actions)
-    dashboard [--port <n>]  Start the web dashboard
+    dashboard [--port <n>] [--quick]  Start the web dashboard
+    setup                   One-command onboarding — detect agent, configure MCP
     check [--last <n>]      Show latest session details
     stats                   Show aggregate session stats
     start <description>     Start a recording session (manual mode)
@@ -78,7 +81,16 @@ async function main() {
 
   if (command === 'dashboard') {
     const portIdx = args.indexOf('--port');
+    const quickIdx = args.indexOf('--quick');
     const port = portIdx >= 0 ? parseInt(args[portIdx + 1]) : 9400;
+
+    if (quickIdx >= 0) {
+      const { fork } = require('child_process');
+      fork(path.join(__dirname, 'cli.js'), ['server'], { stdio: 'ignore', detached: true }).unref();
+      console.log('[agent-obs] MCP server started (agent can now connect)');
+    }
+
+    printSummary();
     await startServer(port);
     return;
   }
@@ -142,6 +154,106 @@ async function main() {
     console.log('');
     console.log('Grade distribution:');
     console.log(`  A: ${distribution.A}  B: ${distribution.B}  C: ${distribution.C}  D: ${distribution.D}  F: ${distribution.F}`);
+    process.exit(0);
+  }
+
+  if (command === 'setup') {
+    const fs = require('fs');
+    const path = require('path');
+    const cwd = process.cwd();
+    let detected = [];
+    let actions = [];
+
+    const opencodeJson = path.join(cwd, 'opencode.json');
+    if (fs.existsSync(opencodeJson)) {
+      detected.push('opencode');
+      try {
+        const config = JSON.parse(fs.readFileSync(opencodeJson, 'utf8'));
+        if (!config.mcp) config.mcp = {};
+        if (!config.mcp['agent-obs']) {
+          config.mcp['agent-obs'] = {
+            type: 'local',
+            command: ['npx', '-y', 'agent-obs@latest', 'server'],
+            enabled: true
+          };
+          fs.writeFileSync(opencodeJson, JSON.stringify(config, null, 2) + '\n');
+          actions.push('opencode.json updated (agent-obs MCP server added)');
+        } else {
+          actions.push('opencode.json already has agent-obs ✓');
+        }
+      } catch (e) {
+        actions.push('Could not update opencode.json: ' + e.message);
+      }
+
+      const agentsMd = path.join(cwd, 'AGENTS.md');
+      const instruction = '\n## Agent Observability (Self-Reporting)\n\nWhen the `agent-obs` MCP server is connected, self-report every tool call:\n\n- Call `agent_obs_start_session` at the start of every task\n- Call `agent_obs_log_tool_call` after EVERY tool call (Read, Write, Edit, Bash, Glob, Grep, etc.) with tool name, duration, status, and output summary\n- Call `agent_obs_end_session` at task completion with token counts\n- NEVER skip log_tool_call — every tool call must be logged. One call = one log.\n- Log errors with status: "error" and the error message\n- Do NOT log the agent-obs tools themselves (start_session, log_tool_call, end_session)\n';
+
+      if (fs.existsSync(agentsMd)) {
+        const content = fs.readFileSync(agentsMd, 'utf8');
+        if (!content.includes('Agent Observability (Self-Reporting)')) {
+          fs.appendFileSync(agentsMd, instruction);
+          actions.push('AGENTS.md updated (self-reporting instruction added)');
+        } else {
+          actions.push('AGENTS.md already has self-reporting instruction ✓');
+        }
+      } else {
+        fs.writeFileSync(agentsMd, instruction + '\n');
+        actions.push('AGENTS.md created (self-reporting instruction added)');
+      }
+    }
+
+    const claudeDir = path.join(cwd, '.claude');
+    const mcpJson = path.join(cwd, '.mcp.json');
+    if (fs.existsSync(claudeDir) || fs.existsSync(mcpJson)) {
+      detected.push('claude-code');
+      const target = mcpJson;
+      let mcpConfig = {};
+      if (fs.existsSync(target)) {
+        try { mcpConfig = JSON.parse(fs.readFileSync(target, 'utf8')); } catch(e) {}
+      }
+      if (!mcpConfig.mcpServers) mcpConfig.mcpServers = {};
+      if (!mcpConfig.mcpServers['agent-obs']) {
+        mcpConfig.mcpServers['agent-obs'] = {
+          command: 'npx',
+          args: ['-y', 'agent-obs@latest', 'server']
+        };
+        fs.writeFileSync(target, JSON.stringify(mcpConfig, null, 2) + '\n');
+        actions.push('.mcp.json created (agent-obs MCP server configured)');
+      } else {
+        actions.push('.mcp.json already has agent-obs ✓');
+      }
+    }
+
+    const cursorDir = path.join(cwd, '.cursor');
+    if (fs.existsSync(cursorDir)) {
+      detected.push('cursor');
+      actions.push('Cursor detected — add this to Cursor Settings > MCP:');
+      actions.push('  { "agent-obs": { "command": "npx", "args": ["-y", "agent-obs@latest", "server"] } }');
+    }
+
+    if (detected.length === 0) {
+      detected.push('unknown');
+      actions.push('No AI agent detected in current directory.');
+      actions.push('Manual setup:');
+      actions.push('  npx agent-obs@latest server    # start MCP server');
+      actions.push('  Add agent-obs to your agent MCP config');
+    }
+
+    console.log('╔══════════════════════════════════════════╗');
+    console.log('║     agent-obs v' + pkg.version + ' — Setup            ║');
+    console.log('╚══════════════════════════════════════════╝');
+    console.log('');
+    console.log('Detected: ' + detected.join(', '));
+    actions.forEach(a => console.log('  ✓ ' + a));
+    console.log('');
+    console.log('Next: restart ' + detected[0]);
+    console.log('Dashboard: http://localhost:9400');
+    console.log('');
+    console.log('To verify:');
+    console.log('  agent-obs dashboard');
+    console.log('  # Run any task in your agent');
+    console.log('  # Sessions should appear automatically');
+
     process.exit(0);
   }
 

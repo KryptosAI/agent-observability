@@ -169,6 +169,20 @@ body{
 /* Footer */
 .footer{padding:8px 16px;border-top:1px solid var(--border);font-size:10px;color:var(--text3);text-align:center;font-family:var(--mono);flex-shrink:0}
 
+/* Setup Box */
+.setup-box {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 10px 16px;
+  margin: 12px 0;
+  display: inline-block;
+}
+.setup-box code {
+  color: #22d3ee;
+  font-size: 13px;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}

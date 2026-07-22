@@ -4,114 +4,86 @@
 
 ## Quick Start
 
-Here's how to connect your agent in 2 minutes: install the package, add agent-obs as an MCP server to your agent platform, tell the agent to self-report, and watch sessions appear in the dashboard.
-
-### Install
+One command. No manual config. No copy-paste.
 
 ```bash
-npm install -g agent-observability
+npx agent-obs@latest setup
 ```
 
-### 1. opencode
+This auto-detects your AI agent (opencode, Claude Code, Cursor) and configures everything:
+- Adds agent-obs to your MCP config
+- Adds the self-reporting instruction
+- Tells you what to do next
 
-Add the MCP server to your `opencode.json`:
+Then restart your agent. Every action will now self-report.
+
+```bash
+agent-obs dashboard    # http://localhost:9400 — see your sessions appear
+```
+
+### What you'll see
+
+After running a task in your agent, the dashboard shows:
+- Every tool call with duration and status
+- A-F session grade (how efficient was your agent?)
+- Cost per session in tokens and dollars
+- Full audit trail of what was read, edited, and executed
+
+### Manual setup (if `setup` can't detect your agent)
+
+**opencode:** Add to `opencode.json`:
 
 ```json
 {
   "mcp": {
     "agent-obs": {
-      "type": "local",
-      "command": ["node", "/Users/williamweishuhn/Documents/New OpenCode Project/agent-observability/cli.js", "server"],
+      "command": "npx",
+      "args": ["-y", "agent-obs@latest", "server"],
       "enabled": true
     }
   }
 }
 ```
 
-Then add this to your system prompt (e.g. in `AGENTS.md`):
-
-> After every tool call, call agent_obs_log_tool_call with the tool name, duration, status, input summary, and output summary. Start a session at the beginning of each task with agent_obs_start_session.
-
-### 2. Claude Code
-
-Add to your project's `.mcp.json`:
+**Claude Code:** Create `.mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "agent-obs": {
-      "command": "agent-obs",
-      "args": ["server"]
+      "command": "npx",
+      "args": ["-y", "agent-obs@latest", "server"]
     }
   }
 }
 ```
 
-Then add a project-level skill so Claude self-reports. Create `.claude/skills/agent-obs/SKILL.md`:
-
-```markdown
----
-name: agent-obs
-description: Report every tool call to agent-obs for observability tracking.
----
-
-At the start of each task, call agent_obs_start_session with a description
-of the task. After every tool call, call agent_obs_log_tool_call with the
-tool name, duration, status, input summary, and output summary. When the
-task is done, call agent_obs_end_session with the final status and token
-counts.
-```
-
-### 3. Cursor
-
-Add to Cursor's MCP settings (`~/.cursor/mcp.json`, or Settings → MCP → Add new global MCP server):
+**Cursor:** Add to Cursor Settings > MCP:
 
 ```json
 {
   "mcpServers": {
     "agent-obs": {
-      "command": "agent-obs",
-      "args": ["server"]
+      "command": "npx",
+      "args": ["-y", "agent-obs@latest", "server"]
     }
   }
 }
 ```
 
-Then add the same self-reporting instruction to your Cursor rules (`.cursorrules` or Settings → Rules):
+See [Agent-Specific Setup](#agent-specific-setup) below for detailed per-platform instructions including self-reporting directives.
 
-> After every tool call, call agent_obs_log_tool_call with the tool name, duration, status, input summary, and output summary. Start a session at the beginning of each task with agent_obs_start_session.
+> **Note:** All data is written to a local SQLite database in `~/.agent-observability/`. No data leaves your machine.
 
-### 4. Self-reporting mode (recommended)
+### Proxy mode (fallback)
 
-The MCP server mode above is the primary way to use agent-obs. The agent self-reports every action it takes — including built-in tools (Read, Write, Edit, Bash, etc.) that never travel over MCP and therefore can't be captured by a proxy. Self-reporting also captures reasoning context the wire protocol never sees: why a tool was chosen, what the agent was trying to accomplish, and how the session should be graded.
-
-For MCP-only workloads, there's also a transparent proxy mode that requires no agent cooperation. Wrap any MCP server command and every tool invocation through it gets traced automatically:
+For agents that can't self-report, wrap any MCP server and every tool invocation gets traced automatically:
 
 ```bash
 agent-obs proxy --desc "fix login bug" -- npx @modelcontextprotocol/server-filesystem /tmp
 ```
 
-The proxy captures tool names, arguments, results, durations, and success/failure status — but only for calls to the wrapped server. Use it as a supplement, not a replacement, for self-reporting.
-
-> **Note:** Proxy mode is a fallback for agents that cannot self-report. It only captures MCP tool calls (~30% of typical agent actions). Prefer the MCP server approach above.
-
-All data is written to a local SQLite database in `~/.agent-observability/`. No data leaves your machine.
-
-### 5. How to verify it's working
-
-```bash
-agent-obs dashboard
-# Open http://localhost:9400
-# You should see a session appear after your agent runs a task
-```
-
-The dashboard shows:
-
-- Session list with grade badges (A-F), timestamps, and token totals
-- Per-session detail view with every tool call, duration, and status
-- Cost estimation breakdowns
-- Full-text search across all tool call inputs and outputs
-- Export to JSON for external analysis
+Proxy mode captures only MCP tool calls (~30% of typical agent actions). Prefer the `setup` / MCP server approach above.
 
 ## Agent-Specific Setup
 

@@ -74,9 +74,13 @@
         </table>
       </div>
       <div class="empty-state" id="sessions-empty">
-        <span class="empty-icon">∅</span>
-        <p>No sessions recorded</p>
-        <p class="empty-hint">Agent sessions will appear here as they execute</p>
+        <span class="empty-icon">◉</span>
+        <p><strong>No agent sessions yet</strong></p>
+        <p class="empty-hint">Your agent isn't self-reporting. Run this once:</p>
+        <div class="setup-box">
+          <code>npx agent-obs@latest setup</code>
+        </div>
+        <p class="empty-hint" style="margin-top:8px">Then restart your agent. Sessions will appear here.</p>
       </div>
     </div>
 
