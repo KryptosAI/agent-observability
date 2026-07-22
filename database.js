@@ -114,6 +114,8 @@ function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_audit_session ON audit_entries(session_id);
     CREATE INDEX IF NOT EXISTS idx_tool_health_server ON tool_health_checks(tool_server);
   `);
+
+  seedDemoSession();
 }
 
 // ── Sessions ──
@@ -305,6 +307,55 @@ function closeStaleSessions() {
   return stale.length;
 }
 
+function seedDemoSession() {
+  const db = getDb();
+  const existing = db.prepare('SELECT COUNT(*) as cnt FROM sessions').get();
+  if (existing.cnt > 0) return false;
+
+  const sessionId = 'demo-session-001';
+  const now = new Date().toISOString();
+  const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+
+  db.prepare(`INSERT INTO sessions (id, agent_type, model, status, grade, total_tokens, input_tokens, output_tokens, estimated_cost_usd, task_description, error_message, started_at, ended_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    .run(sessionId, 'claude-code', 'claude-sonnet-4-20250514', 'complete', 'B', 12450, 9800, 2650, 0.0374,
+      'Fix login redirect bug in auth middleware — session expired after 15min instead of 24h',
+      null, fiveMinAgo, now);
+
+  const tools = [
+    { name: 'Read', server: 'filesystem', step: 1, status: 'success', duration: 34, input: '{"filePath":"/src/auth.ts"}', output: '{"content":"function login() { ... }"}', summary: 'Read 210 lines of auth middleware' },
+    { name: 'Grep', server: 'search', step: 2, status: 'success', duration: 89, input: '{"pattern":"session.*expir"}', output: '{"matches":["line 42: session.expiry = 15 * 60"]}', summary: 'Found session expiry: 15 min at line 42' },
+    { name: 'Read', server: 'filesystem', step: 3, status: 'success', duration: 12, input: '{"filePath":"/src/config.ts"}', output: '{"content":"export const SESSION_TTL = 86400"}', summary: 'Read config: SESSION_TTL = 86400 (24h)' },
+    { name: 'Bash', server: 'terminal', step: 4, status: 'success', duration: 1240, input: '{"command":"npm test -- --run auth"}', output: '{"stdout":"8 passed, 1 failed"}', summary: '1 test failing: session expires too early' },
+    { name: 'Edit', server: 'filesystem', step: 5, status: 'success', duration: 27, input: '{"filePath":"/src/auth.ts","oldString":"session.expiry = 15 * 60","newString":"session.expiry = SESSION_TTL"}', output: '{"applied":true}', summary: 'Replaced hardcoded 15min with SESSION_TTL constant' },
+    { name: 'Read', server: 'filesystem', step: 6, status: 'error', duration: 8, input: '{"filePath":"/src/missing.ts"}', output: '{}', summary: '', error: 'ENOENT: no such file, path not found' },
+    { name: 'Bash', server: 'terminal', step: 7, status: 'success', duration: 890, input: '{"command":"npm test -- --run auth"}', output: '{"stdout":"9 passed, 0 failed"}', summary: 'All 9 tests pass — redirect now uses 24h TTL' },
+    { name: 'Glob', server: 'search', step: 8, status: 'success', duration: 56, input: '{"pattern":"**/auth*"}', output: '{"files":["auth.ts","auth.test.ts"]}', summary: 'Found auth.ts and auth.test.ts' },
+    { name: 'Write', server: 'filesystem', step: 9, status: 'success', duration: 18, input: '{"filePath":"/CHANGELOG.md","content":"..."}', output: '{"bytesWritten":412}', summary: 'Updated CHANGELOG with redirect fix' },
+    { name: 'Grep', server: 'search', step: 10, status: 'success', duration: 45, input: '{"pattern":"TODO|FIXME"}', output: '{"matches":[]}', summary: 'No TODOs or FIXMEs remaining' },
+    { name: 'Bash', server: 'terminal', step: 11, status: 'success', duration: 67, input: '{"command":"git diff --stat"}', output: '{"stdout":"2 files changed, 3 insertions, 3 deletions"}', summary: '2 files changed: auth.ts, config.ts' },
+    { name: 'Edit', server: 'filesystem', step: 12, status: 'success', duration: 22, input: '{"filePath":"/src/auth.ts","oldString":"console.log(expiry)","newString":""}', output: '{"applied":true}', summary: 'Removed debug console.log from auth.ts' },
+  ];
+
+  const insertCall = db.prepare(`INSERT INTO tool_calls (id, session_id, tool_name, tool_server, step_number, input_json, output_json, output_summary, duration_ms, status, error_message, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  const insertDecision = db.prepare(`INSERT INTO decision_points (id, session_id, step_number, chosen_action, rationale, timestamp) VALUES (?, ?, ?, ?, ?, ?)`);
+  const insertAudit = db.prepare(`INSERT INTO audit_entries (id, session_id, event_type, actor, resource_accessed, outcome, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)`);
+
+  const tx = db.transaction(() => {
+    for (const t of tools) {
+      const id = 'demo-call-' + t.step;
+      const ts = new Date(Date.now() - (12 - t.step) * 25000).toISOString();
+      insertCall.run(id, sessionId, t.name, t.server, t.step, t.input, t.output, t.summary, t.duration, t.status, t.error || null, ts);
+      insertDecision.run('demo-decision-' + t.step, sessionId, t.step, 'tool:' + t.name, 'Called ' + t.name + ' (' + t.duration + 'ms, ' + t.status + ')', ts);
+    }
+    insertAudit.run('demo-audit-1', sessionId, 'session_start', 'agent', '/src/auth.ts', 'started', fiveMinAgo);
+    insertAudit.run('demo-audit-2', sessionId, 'session_end', 'agent', '/src/auth.ts', 'complete', now);
+  });
+
+  tx();
+  return true;
+}
+
 module.exports = {
   getDb, initSchema,
   createSession, endSession, getSession, getSessions,
@@ -314,4 +365,5 @@ module.exports = {
   logAudit, getAuditEntries,
   recordHealthCheck, getLatestHealthChecks, getHealthHistory,
   getDashboardStats, computeGrade, estimateCost, closeStaleSessions,
+  seedDemoSession,
 };

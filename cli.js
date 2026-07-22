@@ -20,6 +20,7 @@ function usage() {
     server                  Run as MCP server (recommended — agent self-reports all actions)
     dashboard [--port <n>] [--quick]  Start the web dashboard
     setup                   One-command onboarding — detect agent, configure MCP
+    demo                    Show a pre-loaded demo session in the dashboard
     check [--last <n>]      Show latest session details
     stats                   Show aggregate session stats
     start <description>     Start a recording session (manual mode)
@@ -30,6 +31,7 @@ function usage() {
 
   Examples:
     agent-obs server
+    agent-obs demo
     agent-obs dashboard
     agent-obs check
     agent-obs check --last 3
@@ -254,6 +256,10 @@ async function main() {
     console.log('  # Run any task in your agent');
     console.log('  # Sessions should appear automatically');
 
+    // Auto-open dashboard
+    const { exec } = require('child_process');
+    exec('open http://localhost:9400 2>/dev/null || xdg-open http://localhost:9400 2>/dev/null');
+
     process.exit(0);
   }
 
@@ -337,6 +343,17 @@ async function main() {
     return;
   }
 
+  if (command === 'demo') {
+    const { seedDemoSession, getSessions } = require('./database');
+    seedDemoSession();
+    printSummary();
+    console.log('Demo session loaded — showing a real agent trace');
+    const { exec } = require('child_process');
+    exec('open http://localhost:9400');
+    await startServer(9400);
+    return;
+  }
+
   if (command === 'inspect') {
     const sessionId = args[0];
     if (!sessionId) {
@@ -381,6 +398,10 @@ async function main() {
 
   // Default: start dashboard
   printSummary();
+  const { exec } = require('child_process');
+  const dashboardUrl = 'http://localhost:9400';
+  console.log('Opening ' + dashboardUrl + ' ...');
+  exec('open ' + dashboardUrl + ' 2>/dev/null || xdg-open ' + dashboardUrl + ' 2>/dev/null');
   await startServer(9400);
 }
 

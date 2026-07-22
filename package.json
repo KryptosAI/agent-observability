@@ -1,6 +1,6 @@
 {
   "name": "agent-obs",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Open source agent observability — see what your agents did, why they failed, and what it cost. Runs locally.",
   "main": "cli.js",
   "bin": {
