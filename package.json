@@ -1,12 +1,13 @@
 {
   "name": "agent-obs",
-  "version": "1.0.4",
+  "version": "1.0.6",
   "description": "Open source agent observability — see what your agents did, why they failed, and what it cost. Runs locally.",
   "main": "cli.js",
   "bin": {
     "agent-obs": "./cli.js"
   },
   "scripts": {
+    "postinstall": "node scripts/postinstall.mjs || true",
     "start": "node cli.js start",
     "dashboard": "node cli.js dashboard",
     "inspect": "node cli.js inspect",
@@ -47,6 +48,7 @@
     "mcp-server.js",
     "database.js",
     "public/",
+    "scripts/",
     "README.md",
     "LICENSE"
   ]

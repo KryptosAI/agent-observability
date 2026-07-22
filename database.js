@@ -2,7 +2,7 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 
-const DB_PATH = path.join(__dirname, '.agent-observability', 'sessions.db');
+const DB_PATH = path.join(require('os').homedir(), '.agent-observability', 'sessions.db');
 const fs = require('fs');
 
 let db;
