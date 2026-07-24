@@ -1,6 +1,7 @@
 {
   "name": "agent-obs",
-  "version": "1.0.6",
+  "version": "1.0.7",
+  "mcpName": "io.github.KryptosAI/agent-observability",
   "description": "Trace AI agent execution: every tool call, every error, every dollar. Open source agent observability for Claude, Cursor, opencode, and any MCP-compatible agent. Local-first, free forever.",
   "main": "cli.js",
   "bin": {
