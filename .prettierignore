@@ -1,0 +1,7 @@
+node_modules/
+.agent-observability/
+*.db
+*.db-wal
+*.db-shm
+.env
+.eslintcache

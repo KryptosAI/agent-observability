@@ -29,8 +29,6 @@ function startProxy(targetCommand, targetArgs, options = {}) {
   let totalOutputTokens = 0;
   let stepNumber = 0;
   const knownTools = new Map();
-  let agentStdinBuffer = '';
-  let buffering = false;
 
   logAudit({
     sessionId: session.id,
@@ -189,7 +187,7 @@ function startProxy(targetCommand, targetArgs, options = {}) {
   });
 
   child.on('close', (code) => {
-    const sessionData = getDbSession(session.id);
+    getDbSession(session.id);
     const grade = computeGrade({
       errorCount,
       totalCalls: toolCount,

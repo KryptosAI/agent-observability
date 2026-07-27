@@ -35,7 +35,7 @@ function test_database() {
   const {
     createSession, logToolCall, endSession, getSession,
     getToolCalls, getDashboardStats, recordHealthCheck,
-    getLatestHealthChecks, computeGrade
+    getLatestHealthChecks, computeGrade,
   } = require('./database');
 
   const failures = [];
@@ -60,7 +60,7 @@ function test_database() {
   const call = logToolCall({
     sessionId: session.id, toolName: 'test-tool', toolServer: 'test-server',
     stepNumber: 1, input: { foo: 'bar' }, output: { baz: 'qux' },
-    durationMs: 100, status: 'success'
+    durationMs: 100, status: 'success',
   });
   ok(!!call.id, 'logToolCall should return id');
 
@@ -370,7 +370,7 @@ rl.on('line', (line) => {
       const request = JSON.stringify({
         jsonrpc: '2.0', id: 1,
         method: 'tools/list',
-        params: {}
+        params: {},
       }) + '\n';
       try {
         proxy.stdin.write(request);
@@ -469,7 +469,7 @@ function test_mcp_server() {
         initResp = await send({
           jsonrpc: '2.0', id: 1,
           method: 'initialize',
-          params: { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'test', version: '1.0' } }
+          params: { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'test', version: '1.0' } },
         });
         clearTimeout(initTimeout);
         ok(initResp && initResp.result && initResp.result.capabilities !== undefined,
@@ -479,7 +479,7 @@ function test_mcp_server() {
         const listResp = await send({
           jsonrpc: '2.0', id: 2,
           method: 'tools/list',
-          params: {}
+          params: {},
         });
         ok(listResp && listResp.result && Array.isArray(listResp.result.tools),
           'tools/list should return tools array');
@@ -495,8 +495,8 @@ function test_mcp_server() {
           method: 'tools/call',
           params: {
             name: 'start_session',
-            arguments: { taskDescription: 'MCP server integration test' }
-          }
+            arguments: { taskDescription: 'MCP server integration test' },
+          },
         });
         ok(callResp !== undefined, 'tools/call start_session should return response');
 

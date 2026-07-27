@@ -1,0 +1,25 @@
+{
+  "env": { "node": true, "es2022": true },
+  "extends": "eslint:recommended",
+  "rules": {
+    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    "no-undef": "error",
+    "semi": ["error", "always"],
+    "quotes": ["error", "single", { "avoidEscape": true }],
+    "comma-dangle": ["error", "always-multiline"],
+    "no-console": "off"
+  },
+  "overrides": [
+    {
+      "files": ["test.js"],
+      "rules": {
+        "no-empty": "off",
+        "no-unused-vars": "off"
+      }
+    },
+    {
+      "files": ["scripts/**/*.mjs"],
+      "parserOptions": { "sourceType": "module" }
+    }
+  ]
+}

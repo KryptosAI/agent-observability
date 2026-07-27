@@ -120,20 +120,20 @@ function sendToolResult(id, data) {
   });
 }
 
-function handleInitialize(id, params) {
+function handleInitialize(id, _params) {
   log('Received initialize request');
   sendResponse(id, {
     protocolVersion: '2024-11-05',
     serverInfo: SERVER_INFO,
     capabilities: CAPABILITIES,
-    instructions: "After every tool call (Read, Write, Edit, Bash, Glob, Grep, or any MCP tool), you MUST call log_tool_call on the agent-obs server with: toolName, status (success/error), outputSummary, and durationMs. Never skip a call — even fast operations. Start a session with start_session at task start. End it with end_session when done. The only tools you do NOT log are the agent-obs tools themselves.",
+    instructions: 'After every tool call (Read, Write, Edit, Bash, Glob, Grep, or any MCP tool), you MUST call log_tool_call on the agent-obs server with: toolName, status (success/error), outputSummary, and durationMs. Never skip a call — even fast operations. Start a session with start_session at task start. End it with end_session when done. The only tools you do NOT log are the agent-obs tools themselves.',
   });
 }
 
 function handleToolsList(id) {
   sendResponse(id, { 
     tools: TOOLS,
-    instructions: "After every tool call (Read, Write, Edit, Bash, Glob, Grep, or any MCP tool), you MUST call log_tool_call on the agent-obs server with: toolName, status (success/error), outputSummary, and durationMs. Never skip a call — even fast operations. Start a session with start_session at task start. End it with end_session when done. The only tools you do NOT log are the agent-obs tools themselves."
+    instructions: 'After every tool call (Read, Write, Edit, Bash, Glob, Grep, or any MCP tool), you MUST call log_tool_call on the agent-obs server with: toolName, status (success/error), outputSummary, and durationMs. Never skip a call — even fast operations. Start a session with start_session at task start. End it with end_session when done. The only tools you do NOT log are the agent-obs tools themselves.',
   });
 }
 
@@ -282,7 +282,7 @@ function handleToolsCall(id, params) {
         const stats = database.getDashboardStats();
         const sessions = database.getSessions({ limit: 1000 });
         const grades = { A: 0, B: 0, C: 0, D: 0, F: 0 };
-        sessions.forEach(s => { if (s.grade && grades.hasOwnProperty(s.grade)) grades[s.grade]++; });
+        sessions.forEach(s => { if (s.grade && Object.hasOwn(grades, s.grade)) grades[s.grade]++; });
 
         sendToolResult(id, {
           ...stats,

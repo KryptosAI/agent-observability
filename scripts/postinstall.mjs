@@ -13,22 +13,8 @@ console.log('  Auto-configuring...\n');
 const mcpConfig = {
   type: 'local',
   command: ['npx', '-y', 'agent-obs@latest', 'server'],
-  enabled: true
+  enabled: true,
 };
-
-const instruction = `
-## Agent Observability (Self-Reporting)
-
-When the \`agent-obs\` MCP server is connected, self-report every tool call:
-
-- Call \`agent_obs_start_session\` at the start of every task
-- Call \`agent_obs_log_tool_call\` after EVERY tool call (Read, Write, Edit, Bash, Glob, Grep, etc.) with tool name, duration, status, and output summary
-- Call \`agent_obs_end_session\` at task completion with token counts
-- NEVER skip log_tool_call — every tool call must be logged. One call = one log.
-- Log errors with status: "error" and the error message
-- Do NOT log the agent-obs tools themselves (start_session, log_tool_call, end_session)
-`;
-
 let configured = 0;
 
 // 1. Global opencode config
@@ -69,7 +55,7 @@ for (const p of claudePaths) {
       if (!config.mcpServers['agent-obs']) {
         config.mcpServers['agent-obs'] = {
           command: 'npx',
-          args: ['-y', 'agent-obs@latest', 'server']
+          args: ['-y', 'agent-obs@latest', 'server'],
         };
         fs.writeFileSync(p, JSON.stringify(config, null, 2) + '\n');
         console.log('  ✓ Claude config configured:', p);

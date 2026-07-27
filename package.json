@@ -7,18 +7,28 @@
   "bin": {
     "agent-obs": "./cli.js"
   },
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "postinstall": "node scripts/postinstall.mjs || true",
     "start": "node cli.js start",
     "dashboard": "node cli.js dashboard",
     "inspect": "node cli.js inspect",
     "test": "node test.js",
+    "lint": "eslint . --ext .js,.mjs --ignore-pattern node_modules --ignore-pattern public",
+    "format": "prettier --write '**/*.{js,mjs,json,md}' --ignore-path .prettierignore",
+    "format:check": "prettier --check '**/*.{js,mjs,json,md}' --ignore-path .prettierignore",
     "server": "node cli.js server"
   },
   "dependencies": {
     "better-sqlite3": "^12.11.1",
     "express": "^4.21.0",
     "uuid": "^14.0.1"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "prettier": "^3.3.0"
   },
   "repository": {
     "type": "git",
@@ -72,6 +82,7 @@
     "public/",
     "scripts/",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ]
 }

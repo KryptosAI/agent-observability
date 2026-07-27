@@ -123,7 +123,7 @@ function initSchema() {
 function createSession({ agentType, model, taskDescription }) {
   const db = getDb();
   const id = uuidv4();
-  db.prepare(`INSERT INTO sessions (id, agent_type, model, task_description) VALUES (?, ?, ?, ?)`)
+  db.prepare('INSERT INTO sessions (id, agent_type, model, task_description) VALUES (?, ?, ?, ?)')
     .run(id, agentType || 'unknown', model || null, taskDescription || null);
   return { id, agentType, model };
 }
@@ -243,7 +243,7 @@ function getLatestHealthChecks() {
 
 function getHealthHistory(toolServer, limit = 20) {
   return getDb().prepare(
-    'SELECT * FROM tool_health_checks WHERE tool_server = ? ORDER BY checked_at DESC LIMIT ?'
+    'SELECT * FROM tool_health_checks WHERE tool_server = ? ORDER BY checked_at DESC LIMIT ?',
   ).all(toolServer, limit);
 }
 
@@ -256,7 +256,7 @@ function getDashboardStats() {
   const failedSessions = db.prepare("SELECT COUNT(*) as c FROM sessions WHERE status IN ('error', 'failed')").get().c;
   const totalToolCalls = db.prepare('SELECT COUNT(*) as c FROM tool_calls').get().c;
   const avgDuration = db.prepare(
-    "SELECT AVG((julianday(ended_at) - julianday(started_at)) * 86400) as avg FROM sessions WHERE ended_at IS NOT NULL"
+    'SELECT AVG((julianday(ended_at) - julianday(started_at)) * 86400) as avg FROM sessions WHERE ended_at IS NOT NULL',
   ).get().avg || 0;
   const totalCost = db.prepare('SELECT SUM(estimated_cost_usd) as c FROM sessions').get().c || 0;
   const totalTokens = db.prepare('SELECT SUM(total_tokens) as c FROM sessions').get().c || 0;
@@ -275,7 +275,7 @@ function estimateCost(totalTokens) {
   return Math.round((totalTokens / 1000000) * 3 * 10000) / 10000;
 }
 
-function computeGrade({ errorCount, totalCalls, durationMs }) {
+function computeGrade({ errorCount, totalCalls }) {
   if (totalCalls === 0) return { grade: 'N/A', score: 0 };
   const errorRate = errorCount / totalCalls;
   if (errorRate === 0) return { grade: 'A', score: 95 };
@@ -301,7 +301,7 @@ function closeStaleSessions() {
     endSession(s.id, { 
       status: 'timeout', 
       errorMessage: 'Auto-closed: no activity for over 1 hour',
-      grade: grade.grade
+      grade: grade.grade,
     });
   }
   return stale.length;
@@ -337,9 +337,9 @@ function seedDemoSession() {
     { name: 'Edit', server: 'filesystem', step: 12, status: 'success', duration: 22, input: '{"filePath":"/src/auth.ts","oldString":"console.log(expiry)","newString":""}', output: '{"applied":true}', summary: 'Removed debug console.log from auth.ts' },
   ];
 
-  const insertCall = db.prepare(`INSERT INTO tool_calls (id, session_id, tool_name, tool_server, step_number, input_json, output_json, output_summary, duration_ms, status, error_message, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-  const insertDecision = db.prepare(`INSERT INTO decision_points (id, session_id, step_number, chosen_action, rationale, timestamp) VALUES (?, ?, ?, ?, ?, ?)`);
-  const insertAudit = db.prepare(`INSERT INTO audit_entries (id, session_id, event_type, actor, resource_accessed, outcome, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)`);
+  const insertCall = db.prepare('INSERT INTO tool_calls (id, session_id, tool_name, tool_server, step_number, input_json, output_json, output_summary, duration_ms, status, error_message, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  const insertDecision = db.prepare('INSERT INTO decision_points (id, session_id, step_number, chosen_action, rationale, timestamp) VALUES (?, ?, ?, ?, ?, ?)');
+  const insertAudit = db.prepare('INSERT INTO audit_entries (id, session_id, event_type, actor, resource_accessed, outcome, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)');
 
   const tx = db.transaction(() => {
     for (const t of tools) {

@@ -1,5 +1,9 @@
 # agent-observability
 
+[![CI](https://github.com/KryptosAI/agent-observability/actions/workflows/ci.yml/badge.svg)](https://github.com/KryptosAI/agent-observability/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/agent-obs)](https://www.npmjs.com/package/agent-obs)
+[![license](https://img.shields.io/npm/l/agent-obs)](./LICENSE)
+
 > Open source agent observability — see what your agents did, why they failed, and what it cost. Runs locally. No cloud required.
 
 ## Quick Start

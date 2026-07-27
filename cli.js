@@ -176,7 +176,7 @@ async function main() {
           config.mcp['agent-obs'] = {
             type: 'local',
             command: ['npx', '-y', 'agent-obs@latest', 'server'],
-            enabled: true
+            enabled: true,
           };
           fs.writeFileSync(opencodeJson, JSON.stringify(config, null, 2) + '\n');
           actions.push('opencode.json updated (agent-obs MCP server added)');
@@ -211,13 +211,13 @@ async function main() {
       const target = mcpJson;
       let mcpConfig = {};
       if (fs.existsSync(target)) {
-        try { mcpConfig = JSON.parse(fs.readFileSync(target, 'utf8')); } catch(e) {}
+        try { mcpConfig = JSON.parse(fs.readFileSync(target, 'utf8')); } catch (_) { /* use empty default */ }
       }
       if (!mcpConfig.mcpServers) mcpConfig.mcpServers = {};
       if (!mcpConfig.mcpServers['agent-obs']) {
         mcpConfig.mcpServers['agent-obs'] = {
           command: 'npx',
-          args: ['-y', 'agent-obs@latest', 'server']
+          args: ['-y', 'agent-obs@latest', 'server'],
         };
         fs.writeFileSync(target, JSON.stringify(mcpConfig, null, 2) + '\n');
         actions.push('.mcp.json created (agent-obs MCP server configured)');
@@ -366,7 +366,7 @@ Never skip log_tool_call — every tool call must be logged.\n`);
   if (command === 'demo') {
     const portIdx = args.indexOf('--port');
     const port = portIdx >= 0 ? parseInt(args[portIdx + 1]) : 9400;
-    const { seedDemoSession, getSessions } = require('./database');
+    const { seedDemoSession } = require('./database');
     seedDemoSession();
     printSummary();
     console.log('Demo session loaded — showing a real agent trace');
@@ -383,7 +383,7 @@ Never skip log_tool_call — every tool call must be logged.\n`);
       process.exit(1);
     }
 
-    const { getSession, getToolCalls, getDecisions } = require('./database');
+    const { getSession, getToolCalls } = require('./database');
     const session = getSession(sessionId);
     if (!session) {
       console.error('Session not found');
@@ -391,7 +391,6 @@ Never skip log_tool_call — every tool call must be logged.\n`);
     }
 
     const calls = getToolCalls(session.id);
-    const decisions = getDecisions(session.id);
 
     console.log(`\n  Session: ${session.id}`);
     console.log(`  Agent:   ${session.agent_type}`);

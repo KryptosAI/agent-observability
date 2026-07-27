@@ -4,7 +4,7 @@ const {
   getSessions, getSession, getToolCalls,
   getDecisions, getAuditEntries,
   getDashboardStats, getLatestHealthChecks, getHealthHistory,
-  recordHealthCheck, computeGrade,
+  recordHealthCheck,
 } = require('./database');
 
 const app = express();
@@ -130,7 +130,7 @@ function startServer(port) {
   const p = port || PORT;
   return new Promise((resolve) => {
     app.listen(p, () => {
-      console.log(`\n  Agent Observability Dashboard`);
+      console.log('\n  Agent Observability Dashboard');
       console.log(`  http://localhost:${p}\n`);
       resolve(app);
     });
