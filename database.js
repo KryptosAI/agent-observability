@@ -1,6 +1,8 @@
 const Database = require('better-sqlite3');
 const path = require('path');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
+
+const uuidv4 = () => crypto.randomUUID();
 
 const DB_PATH = path.join(require('os').homedir(), '.agent-observability', 'sessions.db');
 const fs = require('fs');
